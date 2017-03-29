@@ -1,7 +1,68 @@
-<resources>
+<?xml version='1.0' encoding='utf-8'?>
+<!--
+     Copyright (C) 2009 The Android Open Source Project
 
-    <!-- Default screen margins, per the Android Design guidelines. -->
-    <dimen name="activity_horizontal_margin">16dp</dimen>
-    <dimen name="activity_vertical_margin">16dp</dimen>
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
 
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+--><resources>
+
+    <!-- height of a normal list item in edit playlist mode -->
+    <!-- height of an expanded list item in edit playlist mode -->
+    <dimen name="media_control_btn_padding_top">5dip</dimen>
+    <dimen name="widget_name_margin_top">5dip</dimen>
+    <dimen name="widget_name_text_size">24sp</dimen>
+    <dimen name="tab_widget_padding">20dip</dimen>
+    <dimen name="browser_bottom_height">66dip</dimen>
+    <dimen name="playback_media_info_width">420dp</dimen>
+    <dimen name="playback_media_info_margin_top">61dp</dimen>
+    <dimen name="playback_media_info_track_name_margin_top">0dp</dimen>
+    <dimen name="playback_media_info_lrc_bg_margin_top">48dp</dimen>
+    <dimen name="playback_media_info_lrc_width">300dp</dimen>
+    <dimen name="playback_media_info_lrc_height">84dp</dimen>
+    <dimen name="playback_media_info_lrc_margin_top">87dp</dimen>
+    <dimen name="playback_media_info_artist_name_margin_top">48dp</dimen>
+    <dimen name="playback_media_info_margin_right">65dp</dimen>
+    <dimen name="playback_control_btn_height">256dp</dimen>
+    <dimen name="playback_control_btn_margin_top">60dp</dimen>
+    <dimen name="playback_control_btn_margin_left">460dp</dimen>
+    <dimen name="playback_media_btn_height">198dp</dimen>
+    <dimen name="playback_media_btn_interval">78dp</dimen>
+    <dimen name="playback_title_text_size">24sp</dimen>
+    <dimen name="playback_small_text_size">18sp</dimen>
+    <dimen name="playback_album_image_margin_left">102dp</dimen>
+    <dimen name="playback_album_image_margin_top">19dp</dimen>
+    <dimen name="playback_progress_info_margin_top">260dp</dimen>
+    <dimen name="playback_progress_text_margin">10dp</dimen>
+    <dimen name="bottom_text_size">24sp</dimen>
+    <dimen name="list_item_height">84dp</dimen>
+    <dimen name="list_item_padding_left">109dp</dimen>
+    <dimen name="list_item_padding_right">60dp</dimen>
+    <dimen name="list_item_text_margin_left">22dp</dimen>
+    <dimen name="list_item_line1_text_size">24sp</dimen>
+    <dimen name="list_item_line2_text_size">13sp</dimen>
+    <dimen name="media_store_radio_group_padding_left">15dp</dimen>
+    <dimen name="media_store_radio_group_padding_top">10dp</dimen>
+    <dimen name="media_store_item_height">90dp</dimen>
+    <dimen name="media_store_item_padding_left">20dp</dimen>
+    <dimen name="media_store_item_text_size">24sp</dimen>
+    <dimen name="media_store_header_height">90dip</dimen>
+    <dimen name="media_store_header_padding_left">20dp</dimen>
+    <dimen name="media_store_header_text_size">28sp</dimen>
+    <dimen name="media_store_header_text_margin_left">14dp</dimen>
+    <dimen name="browser_tab_padding">68dp</dimen>
+    <dimen name="play_list_item_height">64dp</dimen>
+    <dimen name="play_list_item_content_margin_left">20dp</dimen>
+    <dimen name="play_list_item_content_margin_right">20dp</dimen>
+    <dimen name="play_list_item_text_size">24sp</dimen>
+
+    <dimen name="textview_padingup">24sp</dimen>
 </resources>

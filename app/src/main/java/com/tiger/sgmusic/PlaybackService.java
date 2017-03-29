@@ -13,7 +13,10 @@ public class PlaybackService extends Service {
     private MainActivity mainActivity;
     public static final String TAG = "MyService";
 //   private MainActivity mainActivity=(MainActivity)getA;
+    public static final int PLAY_MODE_REPEAT_ALL = 0;
+    public static final int PLAY_MODE_REPEAT_ONE = 1;
 
+    public static int mPlayMode = PLAY_MODE_REPEAT_ALL;
 
     @Override
     public void onCreate() {
@@ -44,7 +47,7 @@ public class PlaybackService extends Service {
         return null;
     }
 
-     class MyBinder extends Binder {
+    class MyBinder extends Binder {
 
         public void startDownload() {
             Log.d("TAG", " onBind");

@@ -23,6 +23,9 @@ public class MusicStorageFragment extends Fragment{
     private List<String> storelist=new ArrayList<String>();
     private String   udiskPath="/mnt/udisk";
     private MainActivity mActivity;
+    private ListViewAdapter mlistAdapter;
+
+    public String [] mediaListArry={"媒体列表:","硬盘\n","SD卡\n","U盘\n"};
 
     public static MusicStorageFragment newInstance(int num) {
     	MusicStorageFragment fragment= new MusicStorageFragment();
@@ -48,33 +51,53 @@ public class MusicStorageFragment extends Fragment{
             Bundle savedInstanceState) {
         Log.e(TAG, "++OncreateView++");
         View view = inflater.inflate(R.layout.playback_list_layout, null);
-       mActivity = (MainActivity)getActivity();
+        mActivity = (MainActivity)getActivity();
         listView = (ListView)view.findViewById(R.id.main_list);
         listView.setOnItemClickListener(mOnItemClickListener);
-        listView.setAdapter(new ArrayAdapter<String>(getContext(),android.R.layout.simple_list_item_1,storelist));
-        storelist.add("文件列表:");
-        storelist.add("硬盘");
-        storelist.add("SD卡");
-        storelist.add("U盘");
-
+        mlistAdapter=new ListViewAdapter(mActivity,storelist);
+        listView.setAdapter(mlistAdapter);
+        upateStoreList(" ");
+        mlistAdapter.setSelectPosition(1);
 
         return view;
     }
+
+    public void upateStoreList(String tem ){
+//        String [] temArry=new String[4];
+        for(int i=0;i<mediaListArry.length;i++){
+            if(i!=0)
+                mediaListArry[i]=mediaListArry[i]+tem;
+            storelist.add(mediaListArry[i]);
+        }
+    }
+
     private AdapterView.OnItemClickListener mOnItemClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-            //   VideoTabActivity activity = (VideoTabActivity)getActivity();
-            //   activity.play(arg2);
-//            Log.e("+++++","arg2:"+arg2);//第几个
+
             Log.e("storelist",storelist.get(arg2));
-//            MainActivity activity=(MainActivity) getActivity();
-//            activity.play(mediaFilelist.get(arg2));
-//            setlistPosion(arg2);
-            if(arg2==3)
-                mActivity.updatePlaylist(MainActivity.udiskPath);
-            else if(arg2==1)
-                mActivity.updatePlaylist(MainActivity.externalStoragePath);
-            mActivity.switchToPage(2);
+
+            switch (arg2){
+                case 1:
+                    mActivity.updatePlaylist(MainActivity.externalStoragePath);
+                    mActivity.switchToPage(2);
+                    mlistAdapter.setSelectPosition(arg2);
+                    break;
+                case 2:
+                    mActivity.updatePlaylist(MainActivity.sdpath);
+                    mActivity.switchToPage(2);
+                    mlistAdapter.setSelectPosition(arg2);
+                    break;
+                case 3:
+                    mActivity.updatePlaylist(MainActivity.udiskPath);
+                    mActivity.switchToPage(2);
+                    mlistAdapter.setSelectPosition(arg2);
+                    break;
+                default:
+                    break;
+            }
+
+
         }
     };
 }

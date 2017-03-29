@@ -4,6 +4,10 @@
     <string name="app_name">SgMusic</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="Name">曲目</string>
+    <string name="Author">作者</string>
+    <string name="Album">专辑</string>
+    
 
     <!-- teyes-->
     <string translatable="false" name="durationformatshort">%2$d:%5$02d</string>
@@ -15,5 +19,6 @@
     <string name="video_group_info">"%1$s Video Files %2$s"</string>
     <string name="allVideos">"All Videos"</string>
     <string name="video_error_auto_next">"(%1$d) Next"</string>
+    
 
 </resources>
