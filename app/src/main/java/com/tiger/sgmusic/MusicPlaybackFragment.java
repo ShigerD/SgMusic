@@ -1,6 +1,10 @@
 package com.tiger.sgmusic;
 
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -8,8 +12,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -30,18 +36,18 @@ import java.util.List;
  *
  */
 public class MusicPlaybackFragment extends Fragment  implements View.OnClickListener,
-        MediaPlayer.OnCompletionListener, View.OnTouchListener ,
-        MediaPlayer.OnPreparedListener{
+         View.OnTouchListener
+        {
 	private static final String TAG =MusicPlaybackFragment.class.getSimpleName();
 
-	//private VideoView video1;
-//	private CustomVideoView mMusicPlayer;
-    private MediaPlayer mMusicPlayer;
+
+//    private MediaPlayer mMusicPlayer;
     private View layout_Loding;
     private View layout_toolbar;
     private boolean isfullmode=false;
     //seekbar
     private SeekBar mSeekBar;
+
     private static final int MSG_UPDATE_PROGRESS = 0x01;
     private static final int MSG_NOTIFY_POSITION = 0x02;
     private static final int MSG_FADE_OUT        = 0x03;
@@ -54,22 +60,46 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
     private TextView mCurrentTime ;
     private TextView mTotalTime;
 
+
+    private final String ACTION_MUSIC_START = "action_music_start";
+    private final String ACTION_MUSIC_PAUSE = "action_music_pause";
+    private final String ACTION_MUSIC_CHANGED = "action_music_changed";
+    private final String ACTION_MUSIC_PLAYINGSTORE_EJECT = "action_music_eject";
+    private final String ACTION_MUSIC_INIT="music_first_song_init";
+    private final String ACTION_MUSIC_INFO_UPDATED = "action_music_info_updated";
+    private final String ACTION_MUSIC_UPDAE_ID3INFO = "action_music_update_id3info";
+    private LocalReceiver localReceiver;
+    private LocalBroadcastManager localBroadcastManager;
+
     private TextView mTrackName;
     private TextView mArtistName;
     private TextView mAlbumName;
-    private NotificationManage mNotification;
+
+
    //public String mediaPlayPath="/storage/哦呢.mp4";vechiel
 //    public String mediaPlayPath="storage/sdcard0/哦呢.mp4";   //storage/sdcard0/哦呢.mp4
     public static MainActivity mActivity;
     private  List<String> mediaFilelist = new ArrayList<String>();//new
     private  List<String> songNamelist=new ArrayList<String>();
-    private   int listPosion=0;
-    private Boolean isFisrtStart=true;
-    private ImageView mPlayPause;
-    private ImageView mPlaymode;
+    private  int listPosion=0;
+    private  Boolean isFisrtStart=true;
+    private  ImageView mPlayPause;
+    private  ImageView mPlaymode;
 
-    private AudioManager audioManager;
+    private MediaPlayer fragmentMusicPlayer;
+
     int mNum; //页号
+
+    private MediaPlaybackInterface mService;
+    public void setService(MediaPlaybackInterface service) {
+        mService=service;
+        Log.e(TAG, "setService");
+
+    }
+
+
+
+
     public static MusicPlaybackFragment newInstance(int num) {
 
         MusicPlaybackFragment fragment = new MusicPlaybackFragment();
@@ -112,23 +142,20 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
         mTrackName = (TextView) view.findViewById(R.id.trackname);
         mArtistName = (TextView) view.findViewById(R.id.artistname);
         mAlbumName=(TextView)view.findViewById(R.id.albumname);
-//        mMusicPlayer=(CustomVideoView)view.findViewById(R.id.videoView1);
-        mMusicPlayer =  new  MediaPlayer();
-//                mMusicPlayer.setVideoPath(mediaPlayPath); //vechiel
-//        mMusicPlayer.setScreenFull(true);
-//        mMusicPlayer.requestFocus();
-        mMusicPlayer.setOnCompletionListener(this);
-//        mMusicPlayer.setOnTouchListener(this);
-        mMusicPlayer.setOnPreparedListener(this);
 
-        audioManager= (AudioManager) mActivity.getSystemService(mActivity.AUDIO_SERVICE);
-        audioManager.requestAudioFocus(afChangeListener,
-                // Use the music stream.
-                AudioManager.STREAM_MUSIC, // Request permanent focus.
-                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK);
+        localBroadcastManager = LocalBroadcastManager.getInstance(getActivity());
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ACTION_MUSIC_INFO_UPDATED);
+        intentFilter.addAction(ACTION_MUSIC_CHANGED);
+        intentFilter.addAction(ACTION_MUSIC_PAUSE);
+        intentFilter.addAction(ACTION_MUSIC_START);
+        intentFilter.addAction(ACTION_MUSIC_PLAYINGSTORE_EJECT);
+        intentFilter.addAction(ACTION_MUSIC_INIT);
+        intentFilter.addAction(ACTION_MUSIC_UPDAE_ID3INFO);
+        localReceiver=new LocalReceiver();
+        localBroadcastManager.registerReceiver(localReceiver,intentFilter);
 
-        mNotification=new NotificationManage();
-//        mNotification.updateNotification("The fox");
+
     }
 
     @Override
@@ -138,47 +165,17 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
 //        audioManager.abandonAudioFocus(afChangeListener);
 //        mNotification.hideNotification();
     }
-    /**
-     *
-     * @return
-     */
-    AudioManager.OnAudioFocusChangeListener afChangeListener = new AudioManager.OnAudioFocusChangeListener() {
-        public void onAudioFocusChange(int focusChange) {
-            if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
-                if (mMusicPlayer.isPlaying()) {
-//                   pause();
-                    stop();
-                }
 
-            } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
-                if (mMusicPlayer == null) {
-                    playNext();
-                } else if (!mMusicPlayer.isPlaying()) {
-                    mMusicPlayer.start();
-                }
-                // Resume playback
-            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
-                if (mMusicPlayer.isPlaying()) {
-                   stop();
-                }
-                audioManager.abandonAudioFocus(afChangeListener);
-                // Stop playback
-            } else if (focusChange == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                if (mMusicPlayer.isPlaying()) {
-                    stop();
-                }
-
-            } else if (focusChange == AudioManager.AUDIOFOCUS_REQUEST_FAILED) {
-                if (mMusicPlayer.isPlaying()) {
-                    stop();
-                }
-            }
-        }
-    };
     public static MainActivity  getMainActivity(){
-        if (mActivity==null)
-            mActivity=getMainActivity();
+//        if (mActivity==null)
+//            mActivity=(MainActivity)getActivity();
         return mActivity;
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        mActivity=(MainActivity)context;
     }
     /**
      * seekbar
@@ -191,20 +188,31 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
         }
 
     }
+    private int getDuration(){
+        int result=0;
+        try {
+            result=mService.getMediaDuration();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
     private SeekBar.OnSeekBarChangeListener mSeekBarChanged = new SeekBar.OnSeekBarChangeListener() {
 
         @Override
         public void onProgressChanged(SeekBar seekBar, int arg1, boolean fromuser) {
-            if(mMusicPlayer.getDuration() <= 0){
+
+            if(getDuration() <= 0){
                 seekBar.setProgress(0);
                 return;
             }
+
             if(!fromuser){
                 return;
             }
             showBars(DEFAULT_TIMEOUT);
             long newpostion = seekBar.getProgress();
-            mMusicPlayer.seekTo((int)newpostion*1000);
+//            mMusicPlayer.seekTo((int)newpostion*1000);
             mCurrentTime.setText(makeTimeString( newpostion));
             Log.i(TAG, "newposition = "+newpostion);
         }
@@ -212,7 +220,7 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
         @Override
         public void onStartTrackingTouch(SeekBar seekBar) {
             showBars(DEFAULT_TIMEOUT);
-            if(mMusicPlayer.getDuration() <= 0){
+            if(getDuration() <= 0){
                 return;
             }
             mDragging = true;
@@ -222,7 +230,7 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
         @Override
         public void onStopTrackingTouch(SeekBar seekBar) {
             showBars(DEFAULT_TIMEOUT);
-            if (mMusicPlayer.getDuration() <= 0) {
+            if (getDuration()<= 0) {
                 seekBar.setProgress(0);
                 return;
             }
@@ -230,12 +238,25 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
             mHandler.sendEmptyMessage(MSG_UPDATE_PROGRESS);
         }
     };
+
+    private boolean isPlaying(){
+        boolean istrue=false;
+
+        try {
+            if(mService.isPlaying())
+                 istrue=true;
+            else istrue= false;
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return istrue;
+    }
     private int setProgress(){
-        if (mMusicPlayer == null || mDragging) {
+        if (!isPlaying()|| mDragging) {
             return 0;
         }
-        int position = mMusicPlayer.getCurrentPosition();
-        int duration = mMusicPlayer.getDuration();
+        int position = getCurrentPosition();
+        int duration = getDuration();
         if (mSeekBar != null){
             if (duration >= 0) {
                 long pos = position/1000 ;
@@ -251,8 +272,25 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
 
         return position;
     }
+
+    private int getCurrentPosition() {
+        int dur=0;
+        try {
+            dur= mService.getMediaCurDuration();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return dur;
+    }
+
     private void updatePlayBtnState() {
-        if(mMusicPlayer.isPlaying()) {
+        boolean isplay = false;
+        try {
+            isplay = mService.isPlaying();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        if(isplay) {
             mPlayPause.setBackgroundResource(R.drawable.mc_play);
         } else {
             mPlayPause.setBackgroundResource(R.drawable.mc_pause);
@@ -263,6 +301,7 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
         public void handleMessage(Message msg) {
             int pos;
             switch(msg.what){
+
                 case MSG_UPDATE_PROGRESS:
                     pos = setProgress();
                     msg = obtainMessage(MSG_UPDATE_PROGRESS);
@@ -275,7 +314,6 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
 //                        mTrackName.setText(getTrackName(mediaFilelist.get(listPosion)));
 //                        mArtistName.setText(mediaFilelist.get(listPosion));
                     }
-
 
                     break;
                 case MSG_BRAKE_ON:
@@ -292,8 +330,12 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
 //                    }
                     break;
                 case MSG_NOTIFY_MEDIA_INFO:
-                    if (mMusicPlayer.isPlaying()) {
-//                        notifyMediaInfo();
+                    try {
+                        if (mService.isPlaying()) {
+    //                        notifyMediaInfo();
+                        }
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
                     }
                     sendEmptyMessageDelayed(MSG_NOTIFY_MEDIA_INFO, 1000);
                     break;
@@ -322,90 +364,12 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
         Log.e(TAG, " ++End OncreateView++");
         return view;
     }
-    @Override//一个media播放完成调用
-    public void onCompletion(MediaPlayer mp) {
-        Log.d(TAG, "=onCompletion");
-        playNext();//自动播放下一首
-    }
-    /***
-     *播放控制
-     */
-    public  void doPlayNew(String videoPath)
-    {
 
 
-        //更新ID3INfo
-        mTrackName.setText(getTrackName(videoPath));
-        mArtistName.setText(getArtistName(videoPath));
-        mAlbumName.setText(getAlbumName(videoPath));
-//        mCursor.close();
-        mCursor=null;
-//        fullScreen();
-        if(mMusicPlayer!=null)
-            mMusicPlayer.stop();
-        mMusicPlayer.reset();
-        try {
-            mMusicPlayer.setDataSource(videoPath);
-            mMusicPlayer.prepare();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        mMusicPlayer.start();
-
-
-//        mHandler.sendEmptyMessage(MSG_NOTIFY_POSITION);
-    }
-    public  void stop(){
-        mMusicPlayer.stop();
-        mNotification.hideNotification();
-        updatePlayBtnState();
-    }
-    public  void pause(){
-        mMusicPlayer.pause();
-        updatePlayBtnState();
-    }
-
-    public  void playNext(){
-
-        mediaFilelist=mActivity.getPlaylist();
-        if(mediaFilelist.isEmpty()) return;
-        listPosion=mActivity.getlistPosion();
-//        Log.e(TAG,"size:"+mediaFilelist.size());
-        if(PlaybackService.mPlayMode==PlaybackService.PLAY_MODE_REPEAT_ALL)  //列表循环
-        listPosion++;
-
-        listPosion=listPosion%(mediaFilelist.size());
-        mActivity.setlistPosion(listPosion);
-
-        songNamelist=mActivity.getSongNamelist();//name
-        mNotification.updateNotification(songNamelist.get(listPosion));
-
-        doPlayNew(mediaFilelist.get(listPosion));
-
-    }
-
-    public void playPrevious(){
-        mediaFilelist=mActivity.getPlaylist();
-        listPosion=mActivity.getlistPosion();
-//        Log.e(TAG,"size:"+mediaFilelist.size());
-        if(PlaybackService.mPlayMode==PlaybackService.PLAY_MODE_REPEAT_ALL)  //列表循环
-         if(listPosion>0)
-             listPosion--;
-        listPosion=listPosion%(mediaFilelist.size());
-        mActivity.setlistPosion(listPosion);
-        songNamelist=mActivity.getSongNamelist();//name
-        mNotification.updateNotification(songNamelist.get(listPosion));
-        doPlayNew(mediaFilelist.get(listPosion));
-    }
     /**
      *
      *
      */
-    private void fullScreen(){
-        layout_toolbar.setVisibility(View.VISIBLE);
-//        mMusicPlayer.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);
-    }
 
 
     @Override//按钮点击事件
@@ -417,30 +381,40 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
                 {
                     PlaybackService.mPlayMode=PlaybackService.PLAY_MODE_REPEAT_ONE;
                     mPlaymode.setBackgroundResource(R.drawable.mc_repeat_once_normal);
-
                 }
                 else if(PlaybackService.mPlayMode==PlaybackService.PLAY_MODE_REPEAT_ONE)
                 {
                     PlaybackService.mPlayMode=PlaybackService.PLAY_MODE_REPEAT_ALL;
                     mPlaymode.setBackgroundResource(R.drawable.mc_repeat_all_normal);
                 }
-                mNotification.hideNotification();
                 break;
 
             case R.id.img_previous:
-                playPrevious();
+                try {
+                    mService.previous();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
                 break;
             case R.id.img_play:
-                if (mMusicPlayer.isPlaying()) {
-                    mMusicPlayer.pause();
-                }
-                else {
-                    mMusicPlayer.start();
+                try {
+                    if (mService.isPlaying()) {
+                        mService.pause();
+                    }
+                    else {
+                        mService.start();
+                    }
+                } catch (RemoteException e) {
+                    e.printStackTrace();
                 }
                 updatePlayBtnState();
                 break ;
             case R.id.img_next:
-                playNext();
+                try {
+                    mService.next();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
                 break ;
             case R.id.img_dir:
                 mActivity.switchToPage(0);
@@ -470,136 +444,88 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
         result=sTimeArgs[0]+":"+sTimeArgs[1];
         return result;
     }
-    @Override//开始播放一个media之前调用
-    public void onPrepared(MediaPlayer mediaPlayer) {
-        Log.d(TAG, "=onPrepared");
-        int maxValue = mediaPlayer.getDuration() / 1000;
-        Log.e("duration_video",String.valueOf(maxValue));//秒
-        mHandler.removeMessages(MSG_UPDATE_PROGRESS);
-        mHandler.sendEmptyMessage(MSG_UPDATE_PROGRESS);
-
-        if (layout_Loding.getVisibility() == View.VISIBLE) {
-            layout_Loding.setVisibility(View.GONE);
-        }
-
-        if(maxValue > 0) {
-            // reset progress bar;
-            mSeekBar.setProgress(0);
-            mSeekBar.setMax(maxValue);
-            mTotalTime.setText(makeTimeString(maxValue));
-        }
 
 
-    }
-/**
- * mp3 info
- */
+    class LocalReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            switch (intent.getAction()) {
+                case ACTION_MUSIC_INIT:
+                    Log.e(TAG, "onReceive: " + "ACTION_MUSIC_INIT");
+//                    try {
+//                        mService.next();
+//                    } catch (RemoteException e) {
+//                        e.printStackTrace();
+//                    }
+                    break;
+                case ACTION_MUSIC_INFO_UPDATED:
+                    Log.e(TAG, "onReceive: " + "update");
+                    Bundle bundle = intent.getBundleExtra("info");
+                    long current=bundle.getLong("current");
+                    long total=bundle.getLong("duration");
+                    current=current/1000;
+                    total=total/1000;
+                    mCurrentTime.setText(makeTimeString(current));
+                    mTotalTime.setText(makeTimeString(total));
+                    mSeekBar.setMax(((int) total));
+                    mSeekBar.setProgress(((int) current));
+                    break;
+                case ACTION_MUSIC_UPDAE_ID3INFO:
 
-    private Cursor mCursor;
-    private boolean mRequestToken;
-    String[] mCursorCols = new String[] {
-            "audio._id AS _id", // index must match IDCOLIDX below
-            MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM,
-            MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.MIME_TYPE, MediaStore.Audio.Media.ALBUM_ID,
-            MediaStore.Audio.Media.ARTIST_ID,
-            MediaStore.Audio.Media.BOOKMARK
-    };
-    private void tryToGetPlayingId3Info(String path) {
-        if (mCursor == null && !TextUtils.isEmpty(path)) {
-            ContentResolver resolver = getActivity().getContentResolver();
-            Uri uri = MediaStore.Audio.Media.getContentUriForPath(path);
-            String where = MediaStore.Audio.Media.DATA + "=?";
-            String[] selectionArgs = new String[] {
-                    path
-            };
-            try {
-                mCursor = resolver.query(uri, mCursorCols, where,
-                        selectionArgs, null);
-                if (mCursor != null) {
-                    if (mCursor.getCount() != 1) {
-                        mCursor.close();
-                        mCursor = null;
-                    } else {
-                        mCursor.moveToNext();
-                    }
-                }
-            } catch (UnsupportedOperationException ex) {
-            } catch (IllegalStateException ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-    //
-    public String getArtistName(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    return null;
-                }
-            }
-            return mCursor.getString(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST));
-        }
-    }
-    //
-    public long getArtistId(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    return -1;
-                }
-            }
-            return mCursor.getLong(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST_ID));
-        }
-    }
-    //
-    public String getAlbumName(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    return null;
-                }
-            }
-            return mCursor.getString(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM));
-        }
-    }
-    //
-    public long getAlbumId(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    return -1;
-                }
-            }
-            return mCursor.getLong(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID));
-        }
-    }
-    //
-    public String getTrackName(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    if (!TextUtils.isEmpty(mFilePath)) {
-                        return new File(mFilePath).getName();
-                    }
-                    return null;
-                }
-            }
-            return mCursor.getString(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE));
-        }
-    }
-    /*
+                    Bundle bundle2 = intent.getBundleExtra("info");
+                    String songName=bundle2.getString("songName");
+                    String artistName=bundle2.getString("artistName");
+                    String albumName=bundle2.getString("albumName");
+                    mTrackName.setText(songName);
+                    mArtistName.setText(artistName);
+                    mAlbumName.setText(albumName);
+                    Log.e(TAG, "onReceive:" + "ACTION_MUSIC_UPDAE_ID3INFO"+"");
 
-    */
+                    break;
+                case ACTION_MUSIC_CHANGED:
+                    Log.e(TAG, "onReceive: " + "change");
+//                    int playingIndex=MediaModel.getInstance().getPlayingIndex();
+//                    Store store=MediaModel.getInstance().getPlayingStore();
+//                    if (store == null) {
+//                        break;
+//                    }
+//                    Uri uri = MediaModel.getInstance().getUriList(store).get(playingIndex);
+//                    Log.d(TAG, "onReceive: " + uri);
+//                    MusicItem item = MusicUtil.queryMusicFromContentProvider(getContext(), uri);
+//
+//                    if (item!=null) {
+//                        Log.d(TAG, "onReceive: " + item.getFileName());
+//                        if (item.getImage() != null) {
+//                            imgAlbum.setImageBitmap(item.getImage());
+//                        }else {
+//                            imgAlbum.setImageResource(R.drawable.music);
+//                        }
+//                        tvTitle.setText(TextUtils.isEmpty(item.getTitle()) ? item.getFileName() : item.getTitle());
+//                        tvArtist.setText(item.getArtist());
+//                        tvAlbum.setText(item.getAlbum());
+//                    }else {
+//                        Log.d(TAG, "onReceive: " + "item is null");
+//                    }
+                    break;
+                case ACTION_MUSIC_START:
+
+                    Log.e(TAG, "onReceive: " + "ACTION_MUSIC_START");
+                    break;
+                case ACTION_MUSIC_PAUSE:
+                    Log.e(TAG, "onReceive: " + "ACTION_MUSIC_PAUSE");
+//                    btnPlay.setText("play");
+                    break;
+                case ACTION_MUSIC_PLAYINGSTORE_EJECT:
+                    Log.e(TAG, "onReceive: " + "eject");
+//                    activity.switchToPage(0);
+                    break;
+
+                default:
+
+                    break;
+            }
+
+        }
+    }
 
 }

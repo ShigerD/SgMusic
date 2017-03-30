@@ -1,13 +1,17 @@
 package com.tiger.sgmusic;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
@@ -36,6 +40,10 @@ public class MainActivity extends FragmentActivity {
     public static  String externalStoragePath= Environment.getExternalStorageDirectory().getPath();
     public static  String udiskPath="/mnt/udisk/udisk1";
     public static  String sdpath="/mnt/hd/sdcard";
+
+    private Intent startServiceIntent;
+    private MediaPlaybackInterface service;
+    private boolean isPlaying=false;
 
     private int postion = 0;
     private MediaPlayer mp= new MediaPlayer();
@@ -88,7 +96,7 @@ public class MainActivity extends FragmentActivity {
         mViewPager.setAdapter(mAdapter2);
         mViewPager.setCurrentItem(1, true);
 
-        //注册广播
+        //动态注册广播
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(Intent.ACTION_MEDIA_MOUNTED);
         //intentFilter.addAction(Intent.ACTION_MEDIA_REMOVED);
@@ -138,21 +146,43 @@ public class MainActivity extends FragmentActivity {
         super.onDestroy();
     }
 
+
     @Override
     protected void onResume() {
-        Log.e(TAG, "++onResume++");
+        Log.e(TAG, "++onResume()++");
         super.onResume();
+        startServiceIntent =new Intent(this,PlaybackService.class);
+        startService(startServiceIntent);
+        bindService(startServiceIntent, serviceConnection, BIND_AUTO_CREATE);
+        Log.e(TAG, "--onResume()--");
     }
+    private ServiceConnection serviceConnection=new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            service = MediaPlaybackInterface.Stub.asInterface(iBinder);
+            mMusicPlaybackFragment.setService(service);
+            mMusicPlaylistFragment.setService(service);
+            try {
+                isPlaying=service.isPlaying();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+        }
+    };
     /**
      *
      * @return
      */
     public void play(String mediaPath) {
-        mMusicPlaybackFragment.doPlayNew(mediaPath);
+//        service.doPlayNew(mediaPath);
     }
 
     public void playNext(){
-        mMusicPlaybackFragment.playNext();
+//        service.playNext();
     }
 
     public void hideLoading()

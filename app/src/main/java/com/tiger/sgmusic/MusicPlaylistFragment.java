@@ -1,8 +1,12 @@
 package com.tiger.sgmusic;
 
+import android.app.Service;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.RemoteException;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -25,6 +29,7 @@ import java.util.List;
  */
 public class MusicPlaylistFragment extends Fragment {
     private final String TAG = MusicPlaylistFragment.class.getSimpleName();
+    private final String ACTION_MUSIC_INIT="music_first_song_init";
     private ListView listView;//new
     private   List<String> mediaFilelist = new ArrayList<String>();//new
     public  List<String> songNamelist  =new ArrayList<String>();//new
@@ -35,7 +40,7 @@ public class MusicPlaylistFragment extends Fragment {
 
     public  int listPosion=0;
     private Boolean isFisrtStart=true;
-    private MainActivity mActivity;
+
     int mNum; //页号
     public int getlistPosion(){
         return  this.listPosion;
@@ -49,6 +54,15 @@ public class MusicPlaylistFragment extends Fragment {
 
     private ListViewAdapter mlistviewAdapter;
     MainActivity activity;
+
+    private LocalBroadcastManager localBroadcastManager;
+    private MediaPlaybackInterface mService;
+    public void setService(MediaPlaybackInterface service) {
+        mService=service;
+        Log.e(TAG, "setService");
+
+    }
+
 
     public static MusicPlaylistFragment newInstance(int num) {
         MusicPlaylistFragment fragment = new MusicPlaylistFragment();
@@ -83,6 +97,8 @@ public class MusicPlaylistFragment extends Fragment {
 //        new ListFileTask(MainActivity.udiskPath, mediaFilelistUdisk).execute("Hello2");
         Log.e("filepath.isEmpty()",mediaFilelistUdisk.toString());
 
+        localBroadcastManager=LocalBroadcastManager.getInstance(activity);
+
         return view;
     }
 
@@ -107,12 +123,15 @@ public class MusicPlaylistFragment extends Fragment {
     private AdapterView.OnItemClickListener mOnItemClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-         //   VideoTabActivity activity = (VideoTabActivity)getActivity();
-         //   activity.play(arg2);
+
 //            Log.e("+++++","arg2:"+arg2);//第几个
             Log.e("+++++","filepath"+mediaFilelist.get(arg2));
-
-            activity.play(mediaFilelist.get(arg2));
+//            activity.play(mediaFilelist.get(arg2));
+            try {
+                mService.play(arg2);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
             setlistPosion(arg2);
             mlistviewAdapter.setSelectPosition(arg2);
 
@@ -145,11 +164,6 @@ public class MusicPlaylistFragment extends Fragment {
                     name = f.getName().toLowerCase();
                     type = name.substring(name.lastIndexOf(".") + 1);
                     filepath=f.getPath().substring(0,getFilepathIndex(f.getPath()) + 1);
-//                    try {
-//                        filepath=f.getCanonicalPath();
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
                     if(type.equals("mp3")) {
                         mediaFilelist.add(f.getPath());
                         songNamelist.add(f.getName());//获取对应歌名
@@ -193,32 +207,36 @@ public class MusicPlaylistFragment extends Fragment {
             //listArry=(getfileDir(listArry,filepath_as)) ;
             //return listArry;
         }
-
+        @Override
         protected void onProgressUpdate(Integer... values) {
             // TODO Auto-generated method stub
 //            listView.setAdapter(new ArrayAdapter<String>(getActivity(),android.R.layout.simple_list_item_1,mediaFilelist));
             Log.e("#########",values[0].toString());
-//
 
             if(isFisrtStart)
             {
+
                 activity.hideLoading();
-                activity.play(mediaFilelist.get(0));
+//                activity.play(mediaFilelist.get(0));//异常
+                try {
+                    mService.play(0);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+
                 activity.setSongListSelectState(0);
-                new NotificationManage(songNamelist.get(0));
+//                new NotificationManage(songNamelist.get(0),getActivity());
                 isFisrtStart=false;
             }
+
+            Intent intent = new Intent(ACTION_MUSIC_INIT);
+            localBroadcastManager.sendBroadcast(intent);
             Log.e("+++++","onProgressUpdate");
             //super.Integer(values);
             listView.setAdapter(mlistviewAdapter);//更新UI
         }
 
-        @Override
-        protected void onPreExecute() {
 
-            Log.e("+++++","onPreExrcute");
-            super.onPreExecute();
-        }
         @Override//finished commit
         protected void onPostExecute(List<String> result) {
             Log.e("+++++","onPostExecute");
@@ -226,7 +244,7 @@ public class MusicPlaylistFragment extends Fragment {
             listView.setAdapter(mlistviewAdapter);//结束更新UI
 //            mActivity.makeText("扫描到"+"首歌曲");//异常
             Toast.makeText(getActivity(),"扫描到"+mediaFilelist.size()+"首歌曲",Toast.LENGTH_SHORT).show();
-//            mediaFilelist=result;
+//           mediaFilelist=result;
         }
     }
     /**
