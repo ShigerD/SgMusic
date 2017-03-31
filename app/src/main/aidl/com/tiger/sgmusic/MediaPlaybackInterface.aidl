@@ -18,4 +18,6 @@ interface MediaPlaybackInterface {
     void getLatestInfo();
     int getMediaDuration();
     int getMediaCurDuration();
+    void setIsFirstPlay(boolean bool);
+    boolean getIsFirstPlay();
 }

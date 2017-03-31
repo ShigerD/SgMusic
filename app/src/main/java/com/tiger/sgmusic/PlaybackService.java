@@ -50,6 +50,9 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
     private final String ACTION_MUSIC_UPDAE_ID3INFO = "action_music_update_id3info";
     private final String ACTION_MUSIC_PAUSE = "action_music_pause";
     private final String ACTION_MUSIC_PLAYINGSTORE_EJECT = "action_music_eject";
+
+    private boolean isFirstPlay=true;
+
     private MediaPlayer  mMusicPlayer;
 
     private NotificationManage mNotification;
@@ -59,6 +62,7 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
 
 
     public MediaPlaybackInterface.Stub mBinder=new MediaPlaybackInterface.Stub() {
+
         @Override
         public void play(int index) throws RemoteException {
 
@@ -74,7 +78,7 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
 
         @Override
         public void seekTo(int position) throws RemoteException{
-
+                mMusicPlayer.seekTo(position);
         }
 
         @Override
@@ -128,6 +132,17 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
         public int getMediaCurDuration() throws RemoteException {
             return mMusicPlayer.getCurrentPosition();
         }
+
+        @Override
+        public void setIsFirstPlay(boolean bool) throws RemoteException {
+            isFirstPlay=bool;
+        }
+
+        @Override
+        public boolean getIsFirstPlay() throws RemoteException {
+
+            return isFirstPlay;
+        }
     };
 
 
@@ -141,7 +156,7 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
         mMusicPlayer.setOnCompletionListener(this);
         mMusicPlayer.setOnPreparedListener(this);
 
-        mNotification=new NotificationManage(getApplicationContext());
+        mNotification=new NotificationManage(this);
 
 
         Log.e(TAG, "__onCreate()__");
@@ -228,27 +243,24 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
      */
     private void notifyState(String action) {
         Intent intent;
-        switch (action) {
-            case ACTION_MUSIC_START:
-//                initNotification();
-                intent = new Intent(ACTION_MUSIC_START);
-                localBroadcastManager.sendBroadcast(intent);
-                break;
-            case ACTION_MUSIC_PAUSE:
-//                manager.cancelAll();
-                intent = new Intent(ACTION_MUSIC_PAUSE);
-                localBroadcastManager.sendBroadcast(intent);
-                break;
-            case ACTION_MUSIC_CHANGED:
-                intent = new Intent(ACTION_MUSIC_CHANGED);
-                localBroadcastManager.sendBroadcast(intent);
-                break;
-            case ACTION_MUSIC_PLAYINGSTORE_EJECT:
-//                manager.cancelAll();
-                intent = new Intent(ACTION_MUSIC_PLAYINGSTORE_EJECT);
-                localBroadcastManager.sendBroadcast(intent);
-                break;
+
+        if(action.equals(ACTION_MUSIC_START)){
+            intent = new Intent(ACTION_MUSIC_START);
+            localBroadcastManager.sendBroadcast(intent);
         }
+        else if(action.equals(ACTION_MUSIC_PAUSE)){
+            intent = new Intent(ACTION_MUSIC_PAUSE);
+            localBroadcastManager.sendBroadcast(intent);
+        }
+        else if(action.equals(ACTION_MUSIC_CHANGED)){
+            intent = new Intent(ACTION_MUSIC_CHANGED);
+            localBroadcastManager.sendBroadcast(intent);
+        }
+        else if(action.equals(ACTION_MUSIC_PLAYINGSTORE_EJECT)){
+            intent = new Intent(ACTION_MUSIC_PLAYINGSTORE_EJECT);
+            localBroadcastManager.sendBroadcast(intent);
+        }
+
     }
 
     /**
@@ -260,14 +272,15 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
             if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
                 if (mMusicPlayer.isPlaying()) {
 //                   pause();
-                    mMusicPlayer.stop();
+                    stop();
                 }
 
             } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
                 if (mMusicPlayer == null) {
                     playNext();
                 } else if (!mMusicPlayer.isPlaying()) {
-                    mMusicPlayer.start();
+//                    mMusicPlayer.start();
+                    playNext();
                 }
                 // Resume playback
             } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
@@ -321,10 +334,6 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
     public  void doPlayNew(String videoPath)
     {
 
-        //更新ID3INfo
-
-        mNotification.updateNotification(getTrackName(videoPath)); //同步Notification歌名
-
         mCursor=null;
         if(mMusicPlayer!=null)
             mMusicPlayer.stop();
@@ -335,13 +344,13 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         mMusicPlayer.start();
-
+        //更新ID3INfo
+        mNotification.updateNotification(getTrackName(videoPath)); //同步Notification歌名
         updateID3info(videoPath);
-
 //        mHandler.sendEmptyMessage(MSG_NOTIFY_POSITION);
     }
+
     public  void stop(){
         mMusicPlayer.stop();
         mNotification.hideNotification();
@@ -349,6 +358,7 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
     }
     public  void pause(){
         mMusicPlayer.pause();
+        mNotification.hideNotification();
 //        updatePlayBtnState();
     }
 

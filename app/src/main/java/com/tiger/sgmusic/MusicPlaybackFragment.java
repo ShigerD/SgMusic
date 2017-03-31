@@ -166,17 +166,9 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
 //        mNotification.hideNotification();
     }
 
-    public static MainActivity  getMainActivity(){
-//        if (mActivity==null)
-//            mActivity=(MainActivity)getActivity();
-        return mActivity;
-    }
 
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        mActivity=(MainActivity)context;
-    }
+
+
     /**
      * seekbar
      */
@@ -197,6 +189,7 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
         }
         return result;
     }
+    //seekbar 点击拖曳
     private SeekBar.OnSeekBarChangeListener mSeekBarChanged = new SeekBar.OnSeekBarChangeListener() {
 
         @Override
@@ -213,6 +206,11 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
             showBars(DEFAULT_TIMEOUT);
             long newpostion = seekBar.getProgress();
 //            mMusicPlayer.seekTo((int)newpostion*1000);
+            try {
+                mService.seekTo((int)newpostion*1000);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
             mCurrentTime.setText(makeTimeString( newpostion));
             Log.i(TAG, "newposition = "+newpostion);
         }
@@ -449,81 +447,111 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
     class LocalReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            switch (intent.getAction()) {
-                case ACTION_MUSIC_INIT:
-                    Log.e(TAG, "onReceive: " + "ACTION_MUSIC_INIT");
-//                    try {
-//                        mService.next();
-//                    } catch (RemoteException e) {
-//                        e.printStackTrace();
-//                    }
-                    break;
-                case ACTION_MUSIC_INFO_UPDATED:
-                    Log.e(TAG, "onReceive: " + "update");
-                    Bundle bundle = intent.getBundleExtra("info");
-                    long current=bundle.getLong("current");
-                    long total=bundle.getLong("duration");
-                    current=current/1000;
-                    total=total/1000;
-                    mCurrentTime.setText(makeTimeString(current));
-                    mTotalTime.setText(makeTimeString(total));
-                    mSeekBar.setMax(((int) total));
-                    mSeekBar.setProgress(((int) current));
-                    break;
-                case ACTION_MUSIC_UPDAE_ID3INFO:
 
-                    Bundle bundle2 = intent.getBundleExtra("info");
-                    String songName=bundle2.getString("songName");
-                    String artistName=bundle2.getString("artistName");
-                    String albumName=bundle2.getString("albumName");
-                    mTrackName.setText(songName);
-                    mArtistName.setText(artistName);
-                    mAlbumName.setText(albumName);
-                    Log.e(TAG, "onReceive:" + "ACTION_MUSIC_UPDAE_ID3INFO"+"");
-
-                    break;
-                case ACTION_MUSIC_CHANGED:
-                    Log.e(TAG, "onReceive: " + "change");
-//                    int playingIndex=MediaModel.getInstance().getPlayingIndex();
-//                    Store store=MediaModel.getInstance().getPlayingStore();
-//                    if (store == null) {
-//                        break;
-//                    }
-//                    Uri uri = MediaModel.getInstance().getUriList(store).get(playingIndex);
-//                    Log.d(TAG, "onReceive: " + uri);
-//                    MusicItem item = MusicUtil.queryMusicFromContentProvider(getContext(), uri);
-//
-//                    if (item!=null) {
-//                        Log.d(TAG, "onReceive: " + item.getFileName());
-//                        if (item.getImage() != null) {
-//                            imgAlbum.setImageBitmap(item.getImage());
-//                        }else {
-//                            imgAlbum.setImageResource(R.drawable.music);
-//                        }
-//                        tvTitle.setText(TextUtils.isEmpty(item.getTitle()) ? item.getFileName() : item.getTitle());
-//                        tvArtist.setText(item.getArtist());
-//                        tvAlbum.setText(item.getAlbum());
-//                    }else {
-//                        Log.d(TAG, "onReceive: " + "item is null");
-//                    }
-                    break;
-                case ACTION_MUSIC_START:
-
-                    Log.e(TAG, "onReceive: " + "ACTION_MUSIC_START");
-                    break;
-                case ACTION_MUSIC_PAUSE:
-                    Log.e(TAG, "onReceive: " + "ACTION_MUSIC_PAUSE");
-//                    btnPlay.setText("play");
-                    break;
-                case ACTION_MUSIC_PLAYINGSTORE_EJECT:
-                    Log.e(TAG, "onReceive: " + "eject");
-//                    activity.switchToPage(0);
-                    break;
-
-                default:
-
-                    break;
+            if(intent.getAction().equals(ACTION_MUSIC_INIT)){
+                Log.e(TAG, "onReceive: " + "ACTION_MUSIC_INIT");
             }
+            else if(intent.getAction().equals(ACTION_MUSIC_INFO_UPDATED)){
+                Log.e(TAG, "onReceive: " + "update");
+                Bundle bundle = intent.getBundleExtra("info");
+                long current=bundle.getLong("current");
+                long total=bundle.getLong("duration");
+                current=current/1000;
+                total=total/1000;
+                mCurrentTime.setText(makeTimeString(current));
+                mTotalTime.setText(makeTimeString(total));
+                mSeekBar.setMax(((int) total));
+                mSeekBar.setProgress(((int) current));
+            }
+            else if(intent.getAction().equals(ACTION_MUSIC_UPDAE_ID3INFO)){
+                Bundle bundle2 = intent.getBundleExtra("info");
+                String songName=bundle2.getString("songName");
+                String artistName=bundle2.getString("artistName");
+                String albumName=bundle2.getString("albumName");
+                mTrackName.setText(songName);
+                mArtistName.setText(artistName);
+                mAlbumName.setText(albumName);
+                Log.e(TAG, "onReceive:" + "ACTION_MUSIC_UPDAE_ID3INFO"+"");
+            }
+            else if(intent.getAction().equals(ACTION_MUSIC_CHANGED)){
+
+                Log.e(TAG, "onReceive: " + "change");
+            }
+            else if(intent.getAction().equals(ACTION_MUSIC_START)){
+                Log.e(TAG, "onReceive: " + "ACTION_MUSIC_START");
+            }
+            else if(intent.getAction().equals(ACTION_MUSIC_PAUSE)){
+
+            }
+            else if(intent.getAction().equals(ACTION_MUSIC_PLAYINGSTORE_EJECT)){
+
+            }
+
+//            switch (intent.getAction()) {
+//                case ACTION_MUSIC_INIT:
+//                    Log.e(TAG, "onReceive: " + "ACTION_MUSIC_INIT");
+//                    break;
+//                case ACTION_MUSIC_INFO_UPDATED:
+//                    Log.e(TAG, "onReceive: " + "update");
+//                    Bundle bundle = intent.getBundleExtra("info");
+//                    long current=bundle.getLong("current");
+//                    long total=bundle.getLong("duration");
+//                    current=current/1000;
+//                    total=total/1000;
+//                    mCurrentTime.setText(makeTimeString(current));
+//                    mTotalTime.setText(makeTimeString(total));
+//                    mSeekBar.setMax(((int) total));
+//                    mSeekBar.setProgress(((int) current));
+//                    break;
+//                case ACTION_MUSIC_UPDAE_ID3INFO:
+//                    Bundle bundle2 = intent.getBundleExtra("info");
+//                    String songName=bundle2.getString("songName");
+//                    String artistName=bundle2.getString("artistName");
+//                    String albumName=bundle2.getString("albumName");
+//                    mTrackName.setText(songName);
+//                    mArtistName.setText(artistName);
+//                    mAlbumName.setText(albumName);
+//                    Log.e(TAG, "onReceive:" + "ACTION_MUSIC_UPDAE_ID3INFO"+"");
+//                    break;
+//                case ACTION_MUSIC_CHANGED:
+//                    Log.e(TAG, "onReceive: " + "change");
+////                    int playingIndex=MediaModel.getInstance().getPlayingIndex();
+////                    Store store=MediaModel.getInstance().getPlayingStore();
+////                    if (store == null) {
+////                        break;
+////                    }
+////                    Uri uri = MediaModel.getInstance().getUriList(store).get(playingIndex);
+////                    Log.d(TAG, "onReceive: " + uri);
+////                    MusicItem item = MusicUtil.queryMusicFromContentProvider(getContext(), uri);
+////
+////                    if (item!=null) {
+////                        Log.d(TAG, "onReceive: " + item.getFileName());
+////                        if (item.getImage() != null) {
+////                            imgAlbum.setImageBitmap(item.getImage());
+////                        }else {
+////                            imgAlbum.setImageResource(R.drawable.music);
+////                        }
+////                        tvTitle.setText(TextUtils.isEmpty(item.getTitle()) ? item.getFileName() : item.getTitle());
+////                        tvArtist.setText(item.getArtist());
+////                        tvAlbum.setText(item.getAlbum());
+////                    }else {
+////                        Log.d(TAG, "onReceive: " + "item is null");
+////                    }
+//                    break;
+//                case ACTION_MUSIC_START:
+//
+//                    Log.e(TAG, "onReceive: " + "ACTION_MUSIC_START");
+//                    break;
+//                case ACTION_MUSIC_PAUSE:
+//                    Log.e(TAG, "onReceive: " + "ACTION_MUSIC_PAUSE");
+//
+//                    break;
+//                case ACTION_MUSIC_PLAYINGSTORE_EJECT:
+//                    Log.e(TAG, "onReceive: " + "eject");
+//                    break;
+//                default:
+//                    break;
+//            }
 
         }
     }

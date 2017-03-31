@@ -213,21 +213,7 @@ public class MusicPlaylistFragment extends Fragment {
 //            listView.setAdapter(new ArrayAdapter<String>(getActivity(),android.R.layout.simple_list_item_1,mediaFilelist));
             Log.e("#########",values[0].toString());
 
-            if(isFisrtStart)
-            {
-
-                activity.hideLoading();
-//                activity.play(mediaFilelist.get(0));//异常
-                try {
-                    mService.play(0);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-
-                activity.setSongListSelectState(0);
-//                new NotificationManage(songNamelist.get(0),getActivity());
-                isFisrtStart=false;
-            }
+            initFirstTime();
 
             Intent intent = new Intent(ACTION_MUSIC_INIT);
             localBroadcastManager.sendBroadcast(intent);
@@ -246,6 +232,28 @@ public class MusicPlaylistFragment extends Fragment {
             Toast.makeText(getActivity(),"扫描到"+mediaFilelist.size()+"首歌曲",Toast.LENGTH_SHORT).show();
 //           mediaFilelist=result;
         }
+        private void initFirstTime(){
+            try {
+                if(mService.getIsFirstPlay())
+                {
+
+                    activity.hideLoading();
+    //                activity.play(mediaFilelist.get(0));//异常
+                    try {
+                        mService.play(0);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+
+                    activity.setSongListSelectState(0);
+    //                new NotificationManage(songNamelist.get(0),getActivity());
+                    mService.setIsFirstPlay(false);
+                }
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
     /**
      * unused
