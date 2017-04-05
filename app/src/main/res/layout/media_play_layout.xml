@@ -23,7 +23,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="center">
             <TextView
                 android:id="@+id/tv_startTime"
                 android:layout_width="wrap_content"
@@ -37,9 +38,12 @@
                 style="@style/VideoSeekBar"
                 android:layout_width="0dip"
                 android:layout_weight="1"
-                android:layout_height="40dip"
+                android:layout_height="90dip"
                 android:layout_marginLeft="5dp"
-                android:layout_marginRight="5dp"/>
+                android:layout_marginRight="5dp"
+                android:minHeight="90dp"
+                android:maxHeight="90dp"
+                />
             <TextView
                 android:id="@+id/tv_totalTime"
                 android:layout_width="wrap_content"

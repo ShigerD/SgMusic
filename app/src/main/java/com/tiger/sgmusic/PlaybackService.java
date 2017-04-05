@@ -31,7 +31,7 @@ import static com.tiger.sgmusic.MusicPlaybackFragment.mActivity;
 public class PlaybackService extends Service implements MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener {
 
 
-    List<String> mediaFilelist=new ArrayList<String>();
+    List<String> mediaFilelist = new ArrayList<String>();
     int listPosion;
 
     public static final String TAG = "MyService";
@@ -51,74 +51,74 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
     private final String ACTION_MUSIC_PAUSE = "action_music_pause";
     private final String ACTION_MUSIC_PLAYINGSTORE_EJECT = "action_music_eject";
 
-    private boolean isFirstPlay=true;
+    private boolean isFirstPlay = true;
 
-    private MediaPlayer  mMusicPlayer;
+    private MediaPlayer mMusicPlayer;
 
     private NotificationManage mNotification;
 
     private AudioManager audioManager;
 
+    private ID3Info mID3Info;
 
-
-    public MediaPlaybackInterface.Stub mBinder=new MediaPlaybackInterface.Stub() {
+    public MediaPlaybackInterface.Stub mBinder = new MediaPlaybackInterface.Stub() {
 
         @Override
         public void play(int index) throws RemoteException {
 
-            mediaFilelist=mActivity.getPlaylist();
-            if(mediaFilelist.isEmpty()) {
+            mediaFilelist = mActivity.getPlaylist();
+            if (mediaFilelist.isEmpty()) {
                 return;
             }
             mActivity.setlistPosion(index);
             doPlayNew(mediaFilelist.get(index));
 
-            Log.e(TAG,TAG+"play()__");
+            Log.e(TAG, TAG + "play()__");
         }
 
         @Override
-        public void seekTo(int position) throws RemoteException{
-                mMusicPlayer.seekTo(position);
+        public void seekTo(int position) throws RemoteException {
+            mMusicPlayer.seekTo(position);
         }
 
         @Override
-        public void pause() throws RemoteException{
+        public void pause() throws RemoteException {
             mMusicPlayer.pause();
             if (mHandler.hasMessages(MSG_UPDATE_PROGRESS)) {
                 mHandler.removeMessages(MSG_UPDATE_PROGRESS);
             }
             notifyState(ACTION_MUSIC_PAUSE);
-            Log.e(TAG,TAG+"pause()__");
+            Log.e(TAG, TAG + "pause()__");
         }
 
         @Override
-        public void start() throws RemoteException{
+        public void start() throws RemoteException {
             mMusicPlayer.start();
             if (!mHandler.hasMessages(MSG_UPDATE_PROGRESS)) {
                 mHandler.sendEmptyMessage(MSG_UPDATE_PROGRESS);
             }
             notifyState(ACTION_MUSIC_START);
-            Log.e(TAG,TAG+"__start()__");
+            Log.e(TAG, TAG + "__start()__");
         }
 
         @Override
-        public void next() throws RemoteException{
+        public void next() throws RemoteException {
             playNext();
         }
 
         @Override
-        public void previous() throws RemoteException{
+        public void previous() throws RemoteException {
             playPrevious();
         }
 
         @Override
-        public boolean isPlaying() throws RemoteException{
+        public boolean isPlaying() throws RemoteException {
 
-            return  mMusicPlayer.isPlaying();
+            return mMusicPlayer.isPlaying();
         }
 
         @Override
-        public void getLatestInfo() throws RemoteException{
+        public void getLatestInfo() throws RemoteException {
 
         }
 
@@ -135,7 +135,7 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
 
         @Override
         public void setIsFirstPlay(boolean bool) throws RemoteException {
-            isFirstPlay=bool;
+            isFirstPlay = bool;
         }
 
         @Override
@@ -152,16 +152,16 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
 
         localBroadcastManager = LocalBroadcastManager.getInstance(this);
 
-        mMusicPlayer =  new  MediaPlayer();
+        mMusicPlayer = new MediaPlayer();
         mMusicPlayer.setOnCompletionListener(this);
         mMusicPlayer.setOnPreparedListener(this);
 
-        mNotification=new NotificationManage(this);
-
+        mNotification = new NotificationManage(this);
+        mID3Info = new ID3Info(this);
 
         Log.e(TAG, "__onCreate()__");
 
-        audioManager= (AudioManager) this.getSystemService(this.AUDIO_SERVICE);
+        audioManager = (AudioManager) this.getSystemService(this.AUDIO_SERVICE);
         audioManager.requestAudioFocus(afChangeListener,       // Use the music stream.
                 AudioManager.STREAM_MUSIC, // Request permanent focus.
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK);
@@ -200,9 +200,9 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
 
     }
 
-    private Handler mHandler = new Handler(){
+    private Handler mHandler = new Handler() {
         public void handleMessage(android.os.Message msg) {
-            switch(msg.what){
+            switch (msg.what) {
                 case MSG_UPDATE_PROGRESS:
                     updateSeekBar();
                     msg = obtainMessage(MSG_UPDATE_PROGRESS);
@@ -216,47 +216,45 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
 
     private void updateSeekBar() {
 
-        Intent intent=new Intent(ACTION_MUSIC_INFO_UPDATED);
+        Intent intent = new Intent(ACTION_MUSIC_INFO_UPDATED);
         Bundle b = new Bundle();
         b.putLong("duration", mMusicPlayer.getDuration());
         b.putLong("current", mMusicPlayer.getCurrentPosition());
-        intent.putExtra("info",b);
+        intent.putExtra("info", b);
         localBroadcastManager.sendBroadcast(intent);
 
     }
 
     private void updateID3info(String videoPath) {
-        String songName=getTrackName(videoPath);
-        String artistName=getArtistName(videoPath);
-        String albumName=(getAlbumName(videoPath));
-        Intent intent=new Intent(ACTION_MUSIC_UPDAE_ID3INFO);
+        String songName = mID3Info.getTrackName(videoPath);
+        String artistName = mID3Info.getArtistName(videoPath);
+        String albumName = (mID3Info.getAlbumName(videoPath));
+        Intent intent = new Intent(ACTION_MUSIC_UPDAE_ID3INFO);
         Bundle b = new Bundle();
-        b.putString("songName",songName);
-        b.putString("artistName",artistName);
-        b.putString("albumName",albumName);
-        intent.putExtra("info",b);
+        b.putString("songName", songName);
+        b.putString("artistName", artistName);
+        b.putString("albumName", albumName);
+        intent.putExtra("info", b);
         localBroadcastManager.sendBroadcast(intent);
 
     }
+
     /*
      *
      */
     private void notifyState(String action) {
         Intent intent;
 
-        if(action.equals(ACTION_MUSIC_START)){
+        if (action.equals(ACTION_MUSIC_START)) {
             intent = new Intent(ACTION_MUSIC_START);
             localBroadcastManager.sendBroadcast(intent);
-        }
-        else if(action.equals(ACTION_MUSIC_PAUSE)){
+        } else if (action.equals(ACTION_MUSIC_PAUSE)) {
             intent = new Intent(ACTION_MUSIC_PAUSE);
             localBroadcastManager.sendBroadcast(intent);
-        }
-        else if(action.equals(ACTION_MUSIC_CHANGED)){
+        } else if (action.equals(ACTION_MUSIC_CHANGED)) {
             intent = new Intent(ACTION_MUSIC_CHANGED);
             localBroadcastManager.sendBroadcast(intent);
-        }
-        else if(action.equals(ACTION_MUSIC_PLAYINGSTORE_EJECT)){
+        } else if (action.equals(ACTION_MUSIC_PLAYINGSTORE_EJECT)) {
             intent = new Intent(ACTION_MUSIC_PLAYINGSTORE_EJECT);
             localBroadcastManager.sendBroadcast(intent);
         }
@@ -264,7 +262,6 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
     }
 
     /**
-     *
      * @return
      */
     AudioManager.OnAudioFocusChangeListener afChangeListener = new AudioManager.OnAudioFocusChangeListener() {
@@ -311,18 +308,18 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
 
     }
 
-    public class MyAsyncTask extends AsyncTask<String,String,String>{
+    public class MyAsyncTask extends AsyncTask<String, String, String> {
 
 
         @Override
         protected String doInBackground(String... strings) {
-            for(int i=100;i>0;i--){
+            for (int i = 100; i > 0; i--) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                Log.e(TAG, "倒计时 ...."+String.valueOf(i));
+                Log.e(TAG, "倒计时 ...." + String.valueOf(i));
             }
             return null;
         }
@@ -331,11 +328,10 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
     /***
      *播放控制
      */
-    public  void doPlayNew(String videoPath)
-    {
+    public void doPlayNew(String videoPath) {
 
-        mCursor=null;
-        if(mMusicPlayer!=null)
+        mID3Info.mCursor = null;
+        if (mMusicPlayer != null)
             mMusicPlayer.stop();
         mMusicPlayer.reset();
         try {
@@ -346,164 +342,51 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
         }
         mMusicPlayer.start();
         //更新ID3INfo
-        mNotification.updateNotification(getTrackName(videoPath)); //同步Notification歌名
+        mNotification.updateNotification(mID3Info.getTrackName(videoPath)); //同步Notification歌名
         updateID3info(videoPath);
 //        mHandler.sendEmptyMessage(MSG_NOTIFY_POSITION);
     }
 
-    public  void stop(){
+    public void stop() {
         mMusicPlayer.stop();
         mNotification.hideNotification();
 //        updatePlayBtnState();
     }
-    public  void pause(){
+
+    public void pause() {
         mMusicPlayer.pause();
         mNotification.hideNotification();
 //        updatePlayBtnState();
     }
 
 
+    public void playNext() {
 
 
-    public  void playNext(){
+        mediaFilelist = mActivity.getPlaylist();
+        if (mediaFilelist.isEmpty()) return;
+        listPosion = mActivity.getlistPosion();
 
-
-        mediaFilelist=mActivity.getPlaylist();
-        if(mediaFilelist.isEmpty()) return;
-        listPosion=mActivity.getlistPosion();
-
-        if(PlaybackService.mPlayMode==PlaybackService.PLAY_MODE_REPEAT_ALL)  //列表循环
+        if (PlaybackService.mPlayMode == PlaybackService.PLAY_MODE_REPEAT_ALL)  //列表循环
             listPosion++;
 
-        listPosion=listPosion%(mediaFilelist.size());
+        listPosion = listPosion % (mediaFilelist.size());
         mActivity.setlistPosion(listPosion);
         doPlayNew(mediaFilelist.get(listPosion));
 
     }
 
-    public void playPrevious(){
-        mediaFilelist=mActivity.getPlaylist();
-        listPosion=mActivity.getlistPosion();
+    public void playPrevious() {
+        mediaFilelist = mActivity.getPlaylist();
+        listPosion = mActivity.getlistPosion();
 //        Log.e(TAG,"size:"+mediaFilelist.size());
-        if(PlaybackService.mPlayMode==PlaybackService.PLAY_MODE_REPEAT_ALL)  //列表循环
-            if(listPosion>0)
+        if (PlaybackService.mPlayMode == PlaybackService.PLAY_MODE_REPEAT_ALL)  //列表循环
+            if (listPosion > 0)
                 listPosion--;
-        listPosion=listPosion%(mediaFilelist.size());
+        listPosion = listPosion % (mediaFilelist.size());
         mActivity.setlistPosion(listPosion);
 
         doPlayNew(mediaFilelist.get(listPosion));
     }
-
-
-    /**
-     * mp3 info
-     */
-
-    private Cursor mCursor;
-    private boolean mRequestToken;
-    String[] mCursorCols = new String[] {
-            "audio._id AS _id", // index must match IDCOLIDX below
-            MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM,
-            MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.MIME_TYPE, MediaStore.Audio.Media.ALBUM_ID,
-            MediaStore.Audio.Media.ARTIST_ID,
-            MediaStore.Audio.Media.BOOKMARK
-    };
-    private void tryToGetPlayingId3Info(String path) {
-        if (mCursor == null && !TextUtils.isEmpty(path)) {
-            ContentResolver resolver = this.getContentResolver();
-            Uri uri = MediaStore.Audio.Media.getContentUriForPath(path);
-            String where = MediaStore.Audio.Media.DATA + "=?";
-            String[] selectionArgs = new String[] {
-                    path
-            };
-            try {
-                mCursor = resolver.query(uri, mCursorCols, where,
-                        selectionArgs, null);
-                if (mCursor != null) {
-                    if (mCursor.getCount() != 1) {
-                        mCursor.close();
-                        mCursor = null;
-                    } else {
-                        mCursor.moveToNext();
-                    }
-                }
-            } catch (UnsupportedOperationException ex) {
-            } catch (IllegalStateException ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-    //
-    public String getArtistName(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    return null;
-                }
-            }
-            return mCursor.getString(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST));
-        }
-    }
-    //
-    public long getArtistId(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    return -1;
-                }
-            }
-            return mCursor.getLong(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST_ID));
-        }
-    }
-    //
-    public String getAlbumName(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    return null;
-                }
-            }
-            return mCursor.getString(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM));
-        }
-    }
-    //
-    public long getAlbumId(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    return -1;
-                }
-            }
-            return mCursor.getLong(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID));
-        }
-    }
-    //
-    public String getTrackName(String mFilePath) {
-        synchronized (this) {
-            if (mCursor == null) {
-                tryToGetPlayingId3Info(mFilePath);
-                if (mCursor == null) {
-                    if (!TextUtils.isEmpty(mFilePath)) {
-                        return new File(mFilePath).getName();
-                    }
-                    return null;
-                }
-            }
-            return mCursor.getString(mCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE));
-        }
-    }
-    /*
-
-    */
 
 }
