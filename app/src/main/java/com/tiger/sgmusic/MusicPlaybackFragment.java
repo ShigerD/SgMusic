@@ -451,8 +451,8 @@ public class MusicPlaybackFragment extends Fragment  implements View.OnClickList
             if(intent.getAction().equals(ACTION_MUSIC_INIT)){
                 Log.e(TAG, "onReceive: " + "ACTION_MUSIC_INIT");
             }
-            else if(intent.getAction().equals(ACTION_MUSIC_INFO_UPDATED)){
-                Log.e(TAG, "onReceive: " + "update");
+            else if(intent.getAction().equals(ACTION_MUSIC_INFO_UPDATED)){//seekbar update
+//                Log.e(TAG, "onReceive: " + "update");
                 Bundle bundle = intent.getBundleExtra("info");
                 long current=bundle.getLong("current");
                 long total=bundle.getLong("duration");

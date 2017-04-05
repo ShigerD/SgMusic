@@ -105,6 +105,16 @@ public class MainActivity extends FragmentActivity {
         //intentFilter.addAction(Intent.ACTION_MEDIA_BAD_REMOVAL);
         intentFilter.addDataScheme("file");
         getApplicationContext().registerReceiver(mReceiver, intentFilter);
+
+        try {
+            Log.e(TAG, "++onstartServiceIntent++");
+            startServiceIntent =new Intent(this,PlaybackService.class);
+            startService(startServiceIntent);
+            bindService(startServiceIntent, serviceConnection, BIND_AUTO_CREATE);
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
+
         Log.e(TAG, "++End Oncreate++");
     }
 
@@ -143,6 +153,7 @@ public class MainActivity extends FragmentActivity {
     @Override
     protected void onDestroy(){
         Log.e(TAG, "++onDestroy++");
+        unbindService(serviceConnection);
         super.onDestroy();
     }
 
@@ -151,9 +162,9 @@ public class MainActivity extends FragmentActivity {
     protected void onResume() {
         Log.e(TAG, "++onResume()++");
         super.onResume();
-        startServiceIntent =new Intent(this,PlaybackService.class);
-        startService(startServiceIntent);
-        bindService(startServiceIntent, serviceConnection, BIND_AUTO_CREATE);
+//        startServiceIntent =new Intent(this,PlaybackService.class);
+//        startService(startServiceIntent);
+//        bindService(startServiceIntent, serviceConnection, BIND_AUTO_CREATE);
         Log.e(TAG, "--onResume()--");
     }
     private ServiceConnection serviceConnection=new ServiceConnection() {
@@ -177,13 +188,7 @@ public class MainActivity extends FragmentActivity {
      *
      * @return
      */
-    public void play(String mediaPath) {
-//        service.doPlayNew(mediaPath);
-    }
 
-    public void playNext(){
-//        service.playNext();
-    }
 
     public void hideLoading()
     {
@@ -191,29 +196,22 @@ public class MainActivity extends FragmentActivity {
     }
 
 
-    public void  setSongListSelectState(int posion){
-        mMusicPlaylistFragment.setSongListSelectState(posion);
+    public void  setSongListSelectState(){
+        mMusicPlaylistFragment.setSongListSelectState();
     }
-    public List<String> getPlaylist(){
-      return   mMusicPlaylistFragment.getMediaList();
-    }
+//    public List<String> getPlaylist(){
+//      return   mMusicPlaylistFragment.getMediaList();
+//    }
     public List<String> getSongNamelist(){
         return   mMusicPlaylistFragment.songNamelist;
     }
-    public int getlistPosion(){
-        return  mMusicPlaylistFragment.listPosion;
-    }
-    public  void setlistPosion(int listPosion){
-        mMusicPlaylistFragment.setlistPosion(listPosion);
-        setSongListSelectState(listPosion);
-    }
+
+
     public void updatePlaylist(String filepath){
          mMusicPlaylistFragment.updatePlaylist(filepath);
     }
     public void switchToPage(int page) {
         mViewPager.setCurrentItem(page, true);
     }
-    public void makeText(String text_show){
-        Toast.makeText(getApplicationContext(),text_show,Toast.LENGTH_SHORT).show();
-    }
+
 }

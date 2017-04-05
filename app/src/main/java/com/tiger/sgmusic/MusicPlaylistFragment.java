@@ -31,26 +31,28 @@ public class MusicPlaylistFragment extends Fragment {
     private final String TAG = MusicPlaylistFragment.class.getSimpleName();
     private final String ACTION_MUSIC_INIT="music_first_song_init";
     private ListView listView;//new
-    private   List<String> mediaFilelist = new ArrayList<String>();//new
-    public  List<String> songNamelist  =new ArrayList<String>();//new
+
+
     public  List<String> mediaFilelistHd = new ArrayList<String>();//new
     public  List<String> mediaFilelistUdisk = new ArrayList<String>();//new
     public  List<String> mediaFilelistSdcard = new ArrayList<String>();//new
-    public  List<String> mediaDisplayList = new ArrayList<String>();//new
+    // private   List<String> mediaFilelist = new ArrayList<String>();//new
+    public  List<String> mediaDisplayList = MediaList.mediaDisplayList;//new
+    public  List<String> songNamelist  =MediaList.songNamelist;//new
 
-    public  int listPosion=0;
+    public  int listPosion=MediaList.songPosion;
     private Boolean isFisrtStart=true;
 
     int mNum; //页号
-    public int getlistPosion(){
-        return  this.listPosion;
-    }
+//    public int getlistPosion(){
+//        return  this.listPosion;
+//    }
     public  void setlistPosion(int listPosion){
         this.listPosion=listPosion;
     }
-    public List<String> getMediaList(){
-        return this.mediaFilelist;
-    }
+//    public List<String> getMediaList(){
+//        return this.mediaFilelist;
+//    }
 
     private ListViewAdapter mlistviewAdapter;
     MainActivity activity;
@@ -90,7 +92,8 @@ public class MusicPlaylistFragment extends Fragment {
         listView.setOnItemClickListener(mOnItemClickListener);
         activity=(MainActivity) getActivity();
 //        mlistviewAdapter=new ListViewAdapter(getActivity(), mediaFilelist);
-        mlistviewAdapter=new ListViewAdapter(getActivity(), mediaDisplayList);//mediaDisplayList
+
+        mlistviewAdapter=new ListViewAdapter(getActivity(), MediaList.mediaDisplayList);//mediaDisplayList
         listView.setAdapter(mlistviewAdapter);
 
         updatePlaylist(MainActivity.externalStoragePath);
@@ -105,9 +108,18 @@ public class MusicPlaylistFragment extends Fragment {
     public void updatePlaylist(String filepath){
         try{
 
-            mediaFilelist.clear();
-            mediaDisplayList.clear();
-            new ListFileTask(filepath, mediaDisplayList).execute("Hello");
+
+            if(MediaList.mediaFilelist.size()==0&&isFisrtStart)//为零service first或者列表为空
+            {
+                MediaList.mediaFilelist.clear();
+                mediaDisplayList.clear();
+                new ListFileTask(filepath, mediaDisplayList).execute("Hello");
+            }
+
+            else{//service is working
+                mService.updateID3(MediaList.mediaFilelist.get(listPosion));
+                activity.setSongListSelectState();
+            }
             Toast.makeText(getActivity(),filepath,Toast.LENGTH_LONG).show();
 
         }
@@ -125,7 +137,7 @@ public class MusicPlaylistFragment extends Fragment {
         public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
 
 //            Log.e("+++++","arg2:"+arg2);//第几个
-            Log.e("+++++","filepath"+mediaFilelist.get(arg2));
+            Log.e("+++++","filepath"+MediaList.mediaFilelist.get(arg2));
 //            activity.play(mediaFilelist.get(arg2));
             try {
                 mService.play(arg2);
@@ -138,8 +150,8 @@ public class MusicPlaylistFragment extends Fragment {
         }
     };
 
-    public void setSongListSelectState(int posion){
-        mlistviewAdapter.setSelectPosition(posion);
+    public void  setSongListSelectState(){
+        mlistviewAdapter.setSelectPosition(MediaList.songPosion);
     }
 
     private class ListFileTask extends AsyncTask<String, Integer, List<String>> {
@@ -149,7 +161,7 @@ public class MusicPlaylistFragment extends Fragment {
             File file=new File(Path);
 
             if(file.list()==null)
-                return mediaFilelist;
+                return MediaList.mediaFilelist;
             File[] subFile=file.listFiles();
             String name = "";
             String type = "";
@@ -165,7 +177,7 @@ public class MusicPlaylistFragment extends Fragment {
                     type = name.substring(name.lastIndexOf(".") + 1);
                     filepath=f.getPath().substring(0,getFilepathIndex(f.getPath()) + 1);
                     if(type.equals("mp3")) {
-                        mediaFilelist.add(f.getPath());
+                        MediaList.mediaFilelist.add(f.getPath());
                         songNamelist.add(f.getName());//获取对应歌名
                         mediaDisplayList.add(f.getName()+"\n"+filepath);
                         Log.e("#########",f.getPath());
@@ -176,7 +188,7 @@ public class MusicPlaylistFragment extends Fragment {
                     }
                 }
 
-            return mediaFilelist;
+            return MediaList.mediaFilelist;
 
             }
         private int getFilepathIndex(String path){
@@ -202,8 +214,12 @@ public class MusicPlaylistFragment extends Fragment {
             Log.e("+++++","doInback");
             //if(!mediaFilelist.isEmpty())
             //mediaFilelist.clear();
-            mediaFilelist=(newGetfileDir(filepath_as)) ;
-            return mediaFilelist;
+            MediaList.mediaFilelist=(newGetfileDir(filepath_as)) ;
+
+            MediaList.mediaDisplayList=mediaDisplayList;
+
+
+            return MediaList.mediaFilelist;
             //listArry=(getfileDir(listArry,filepath_as)) ;
             //return listArry;
         }
@@ -226,10 +242,10 @@ public class MusicPlaylistFragment extends Fragment {
         @Override//finished commit
         protected void onPostExecute(List<String> result) {
             Log.e("+++++","onPostExecute");
-
+            isFisrtStart=false;
             listView.setAdapter(mlistviewAdapter);//结束更新UI
 //            mActivity.makeText("扫描到"+"首歌曲");//异常
-            Toast.makeText(getActivity(),"扫描到"+mediaFilelist.size()+"首歌曲",Toast.LENGTH_SHORT).show();
+            Toast.makeText(getActivity(),"扫描到"+MediaList.mediaFilelist.size()+"首歌曲",Toast.LENGTH_SHORT).show();
 //           mediaFilelist=result;
         }
         private void initFirstTime(){
@@ -245,7 +261,7 @@ public class MusicPlaylistFragment extends Fragment {
                         e.printStackTrace();
                     }
 
-                    activity.setSongListSelectState(0);
+                    activity.setSongListSelectState();
     //                new NotificationManage(songNamelist.get(0),getActivity());
                     mService.setIsFirstPlay(false);
                 }
@@ -255,43 +271,5 @@ public class MusicPlaylistFragment extends Fragment {
         }
 
     }
-    /**
-     * unused
-     */
-    private class PlayAsyncTask extends AsyncTask<String, Integer, String>
-    {
-        MainActivity activity=(MainActivity)getActivity();
-        int i=0;
-        public PlayAsyncTask() {
-            Log.e("~~~~~~~~~","onStruct");
-        }
 
-        @Override
-        protected void onPostExecute(String result) {
-            Log.e("~~~~~~~~~","onPostExecute");
-//            activity.hideLoading();
-//            activity.play(activity.getPlaylist().get(0));
-            super.onPostExecute(result);
-        }
-
-        //在PreExcute执行后被启动AysncTask的后台线程调用，将结果返回给UI线程
-        @Override
-        protected String doInBackground(String... params) {
-            // TODO Auto-generated method stub
-            Log.e("~~~~~~~~~~~","ondoInback_begin");
-
-            while(true)
-                if(activity.getPlaylist().size()==0)
-
-                    try {
-                        Thread.sleep(1000);
-                        Log.e("~~~~~~~~~~~",activity.getPlaylist().toString());
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                else
-                    return null;
-
-        }
-    }
 }

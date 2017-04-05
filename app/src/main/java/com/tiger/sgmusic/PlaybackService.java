@@ -30,9 +30,11 @@ import static com.tiger.sgmusic.MusicPlaybackFragment.mActivity;
 
 public class PlaybackService extends Service implements MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener {
 
+    public static boolean isServiceWorking=false;
 
-    List<String> mediaFilelist = new ArrayList<String>();
-    int listPosion;
+    List<String> mediaFilelist = MediaList.mediaFilelist;
+
+//    int listPosion=MediaList.songPosion;
 
     public static final String TAG = "MyService";
     public static final int PLAY_MODE_REPEAT_ALL = 0;
@@ -62,15 +64,19 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
     private ID3Info mID3Info;
 
     public MediaPlaybackInterface.Stub mBinder = new MediaPlaybackInterface.Stub() {
+        @Override
+        public void updateID3(String videoPath) throws RemoteException {
+            updateID3info(videoPath);
+        }
 
         @Override
         public void play(int index) throws RemoteException {
 
-            mediaFilelist = mActivity.getPlaylist();
+
             if (mediaFilelist.isEmpty()) {
                 return;
             }
-            mActivity.setlistPosion(index);
+            MediaList.songPosion=index;
             doPlayNew(mediaFilelist.get(index));
 
             Log.e(TAG, TAG + "play()__");
@@ -149,7 +155,7 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
     @Override
     public void onCreate() {
         super.onCreate();
-
+        isServiceWorking=true;
         localBroadcastManager = LocalBroadcastManager.getInstance(this);
 
         mMusicPlayer = new MediaPlayer();
@@ -225,7 +231,7 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
 
     }
 
-    private void updateID3info(String videoPath) {
+    public void updateID3info(String videoPath) {
         String songName = mID3Info.getTrackName(videoPath);
         String artistName = mID3Info.getArtistName(videoPath);
         String albumName = (mID3Info.getAlbumName(videoPath));
@@ -341,9 +347,11 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
             e.printStackTrace();
         }
         mMusicPlayer.start();
+        //同步Notification歌名
+        mNotification.updateNotification(mID3Info.getTrackName(videoPath));
         //更新ID3INfo
-        mNotification.updateNotification(mID3Info.getTrackName(videoPath)); //同步Notification歌名
         updateID3info(videoPath);
+        mActivity.setSongListSelectState();
 //        mHandler.sendEmptyMessage(MSG_NOTIFY_POSITION);
     }
 
@@ -363,30 +371,30 @@ public class PlaybackService extends Service implements MediaPlayer.OnCompletion
     public void playNext() {
 
 
-        mediaFilelist = mActivity.getPlaylist();
+
         if (mediaFilelist.isEmpty()) return;
-        listPosion = mActivity.getlistPosion();
+
 
         if (PlaybackService.mPlayMode == PlaybackService.PLAY_MODE_REPEAT_ALL)  //列表循环
-            listPosion++;
+            MediaList.songPosion++;
 
-        listPosion = listPosion % (mediaFilelist.size());
-        mActivity.setlistPosion(listPosion);
-        doPlayNew(mediaFilelist.get(listPosion));
+        MediaList.songPosion = MediaList.songPosion % (mediaFilelist.size());
+
+        doPlayNew(mediaFilelist.get(MediaList.songPosion));
 
     }
 
     public void playPrevious() {
-        mediaFilelist = mActivity.getPlaylist();
-        listPosion = mActivity.getlistPosion();
+
+
 //        Log.e(TAG,"size:"+mediaFilelist.size());
         if (PlaybackService.mPlayMode == PlaybackService.PLAY_MODE_REPEAT_ALL)  //列表循环
-            if (listPosion > 0)
-                listPosion--;
-        listPosion = listPosion % (mediaFilelist.size());
-        mActivity.setlistPosion(listPosion);
+            if (MediaList.songPosion > 0)
+                MediaList.songPosion--;
+        MediaList.songPosion = MediaList.songPosion % (mediaFilelist.size());
 
-        doPlayNew(mediaFilelist.get(listPosion));
+
+        doPlayNew(mediaFilelist.get(MediaList.songPosion));
     }
 
 }

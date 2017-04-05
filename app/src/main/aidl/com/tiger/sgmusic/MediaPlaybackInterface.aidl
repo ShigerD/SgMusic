@@ -20,4 +20,5 @@ interface MediaPlaybackInterface {
     int getMediaCurDuration();
     void setIsFirstPlay(boolean bool);
     boolean getIsFirstPlay();
+    void updateID3(String videoPath);
 }
